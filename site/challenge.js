@@ -39,6 +39,8 @@
     return mins + ":" + String(secs).padStart(2, "0");
   }
 
+  const challengeFormat = window.rownativeChallengeFormat;
+
   function fmtDate(iso) {
     if (!iso) return "—";
     return (iso + "").slice(0, 10);
@@ -293,7 +295,7 @@
     }
 
     const tbody = document.getElementById("leaderboard-body");
-    const colSpan = 6 + (hasHandicap ? 2 : 0) + (showAge ? 1 : 0);
+    const colSpan = 8 + (hasHandicap ? 2 : 0) + (showAge ? 1 : 0);
     if (filtered.length === 0) {
       tbody.innerHTML = "<tr><td colspan='" + colSpan + "'>No results yet.</td></tr>";
       return;
@@ -313,6 +315,8 @@
           row += "<td>" + (r.crewAvgAge != null ? escapeHtml(String(r.crewAvgAge)) : "—") + "</td>";
         }
         row += "<td class='time'>" + fmtTime(r.rawTimeS) + "</td>";
+        row += "<td class='distance'>" + challengeFormat.formatCourseDistance(r.courseDistanceM) + "</td>";
+        row += "<td class='time'>" + challengeFormat.formatAveragePace(r.rawTimeS, r.courseDistanceM) + "</td>";
         if (hasHandicap) {
           row += "<td class='time'>" + fmtTime(r.correctedTimeS) + "</td>";
           row += "<td>" + (r.points != null ? r.points.toFixed(1) + "%" : "—") + "</td>";
