@@ -18,8 +18,12 @@ test("uses an em dash for unavailable or invalid course distance", () => {
 });
 
 test("calculates pace per 500m from raw time and measured distance", () => {
-  assert.equal(formatAveragePace(1320, 5000), "2:12");
-  assert.equal(formatAveragePace(603, 2500), "2:01");
+  assert.equal(formatAveragePace(1320, 5000), "2:12.0");
+  assert.equal(formatAveragePace(603, 2500), "2:00.6");
+});
+
+test("rounds pace to tenths without carrying seconds past 60", () => {
+  assert.equal(formatAveragePace(599.9, 2500), "2:00.0");
 });
 
 test("does not calculate pace when time or distance is invalid", () => {

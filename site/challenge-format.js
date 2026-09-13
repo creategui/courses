@@ -23,7 +23,10 @@
     const rawTime = Number(rawTimeS);
     const distance = Number(distanceM);
     if (!Number.isFinite(rawTime) || rawTime <= 0 || !Number.isFinite(distance) || distance <= 0) return "—";
-    return formatTime(rawTime * 500 / distance);
+    const totalTenths = Math.round(rawTime * 5000 / distance);
+    const mins = Math.floor(totalTenths / 600);
+    const secs = ((totalTenths % 600) / 10).toFixed(1);
+    return mins + ":" + secs.padStart(4, "0");
   }
 
   function colorForResultId(resultId) {
