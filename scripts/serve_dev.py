@@ -166,10 +166,11 @@ def _is_client_disconnect_oserror(exc: OSError) -> bool:
     return False
 
 
-class ReusableTCPServer(socketserver.TCPServer):
-    """Allow quick restart after Ctrl+C without waiting for TIME_WAIT (especially on Windows)."""
+class ReusableTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    """Keep browser preconnections from blocking other requests; allow quick restarts."""
 
     allow_reuse_address = True
+    daemon_threads = True
 
 
 # In-memory mock state (persists for the lifetime of the server process)
