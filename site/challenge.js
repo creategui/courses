@@ -428,6 +428,7 @@
 
     handicapRow.classList.toggle("hidden", !(c && c.hasHandicap));
     resultMsg.classList.add("hidden");
+    resultMsg.classList.remove("error");
     resultMsg.innerHTML = "";
     displayNameInput.value = "";
     const shareCoursePathInput = document.getElementById("submit-share-course-path");
@@ -472,6 +473,45 @@
 
   function closeSubmitModal() {
     document.getElementById("submit-modal").classList.add("hidden");
+  }
+
+  function showCourseValidation(data) {
+    const diagnostics = data.gateDiagnostics;
+    if (!diagnostics || diagnostics.reason === "no_gates") return;
+    const dialog = document.createElement("dialog");
+    dialog.className = "course-validation-dialog";
+    dialog.setAttribute("aria-labelledby", "submit-course-validation-title");
+    dialog.innerHTML = '<h3 id="submit-course-validation-title">Session does not match the course</h3>' +
+      '<p class="validation-summary"></p><p>Orange: GPS trace · Green: passed gate · Red dashed: missed gate</p>' +
+      '<div class="validation-map" aria-label="Course gates and session GPS trace"></div>' +
+      '<form method="dialog"><button class="btn btn-secondary">Close</button></form>';
+    dialog.querySelector(".validation-summary").textContent = diagnostics.reason === "gate_order"
+      ? "Your session crossed every gate, but did not complete them in the required order."
+      : "Missed gates: " + diagnostics.gates.filter((gate) => !gate.passed).map((gate) => gate.name).join(", ") + ".";
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    const validationMap = L.map(dialog.querySelector(".validation-map"));
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors", maxZoom: 19,
+    }).addTo(validationMap);
+    const layers = L.featureGroup().addTo(validationMap);
+    if (Array.isArray(data.latlng) && data.latlng.length >= 2) {
+      L.polyline(data.latlng, { color: "#e65c00", weight: 4 }).addTo(layers);
+    }
+    diagnostics.gates.forEach((gate) => {
+      L.polygon(gate.points.map((point) => [point.lat, point.lon]), {
+        color: gate.passed ? "#16803c" : "#c62828",
+        weight: gate.passed ? 3 : 5,
+        dashArray: gate.passed ? null : "6 4",
+        fillOpacity: gate.passed ? 0.15 : 0.35,
+      }).addTo(layers);
+    });
+    validationMap.invalidateSize();
+    if (layers.getBounds().isValid()) validationMap.fitBounds(layers.getBounds(), { padding: [40, 40], maxZoom: 16 });
+    dialog.addEventListener("close", () => {
+      validationMap.remove();
+      dialog.remove();
+    }, { once: true });
   }
 
   function doSubmit() {
@@ -520,8 +560,12 @@
       .then((r) => r.json())
       .then((data) => {
         if (data.error) {
-          resultMsg.textContent = data.validationNote ? data.error + ": " + data.validationNote : data.error;
+          const noGates = data.gateDiagnostics?.reason === "no_gates";
+          resultMsg.textContent = noGates
+            ? "This session is not near the selected course. Its GPS trace does not pass any course gates."
+            : data.validationNote ? data.error + ": " + data.validationNote : data.error;
           resultMsg.classList.add("error");
+          if (!noGates && data.gateDiagnostics) showCourseValidation(data);
           if (data.error.includes("crewAvgAge") || data.error.includes("crew age")) {
             const crewAgeInput = document.getElementById("submit-crew-avg-age");
             if (crewAgeInput) crewAgeInput.focus();
