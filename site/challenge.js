@@ -61,7 +61,6 @@
     if (courseTrackController) return;
     courseTrackController = challengeFormat.createCourseTrackController({
       fetchTrack: fetchCourseTrack,
-      colorForId: challengeFormat.colorForResultId,
       createLayer: (latlng, color) => L.polyline(latlng, { color, weight: 4, opacity: 0.9 }),
       addLayer: (layer) => layer.addTo(map),
       removeLayer: (layer) => map.removeLayer(layer),
@@ -341,13 +340,13 @@
         const rank = sortByRawTime ? i + 1 : (r.rank != null ? r.rank : i + 1);
         const resultId = r.id != null ? String(r.id) : "";
         const canShowCourseTrack = Boolean(resultId) && r.hasCourseTrack === true;
-        const trackColor = resultId ? challengeFormat.colorForResultId(resultId) : "#777";
         const isTrackSelected = canShowCourseTrack && courseTrackController && courseTrackController.isSelected(resultId);
+        const trackColor = isTrackSelected ? courseTrackController.getColor(resultId) : null;
         const workoutLink = r.activityId
           ? "<a href='https://intervals.icu/activities/i" + encodeURIComponent(String(r.activityId).replace(/^i/, "")) + "' target='_blank' rel='noopener'>↗</a>"
           : "";
         let row =
-          "<tr class='course-track-row" + (isTrackSelected ? " track-selected" : "") + "' style='--course-track-color: " + trackColor + "'>" +
+          "<tr class='course-track-row" + (isTrackSelected ? " track-selected' style='--course-track-color: " + trackColor + "'" : "'") + ">" +
           "<td>" + rank + "</td>" +
           "<td>" + escapeHtml(r.displayName || "Anonymous") + " " + workoutLink + "</td>" +
           "<td>" + escapeHtml(r.boatType || "—") + "</td>";
@@ -357,13 +356,19 @@
         row += "<td class='time'>" + fmtTime(r.rawTimeS) + "</td>";
         row += "<td class='distance'>" + challengeFormat.formatCourseDistance(r.courseDistanceM) + "</td>";
         row += "<td class='time'>" + challengeFormat.formatAveragePace(r.rawTimeS, r.courseDistanceM) + "</td>";
-        row +=
-          "<td><label class='course-track-toggle' title='" + (canShowCourseTrack ? "Show this timed course path" : "Course path was not shared") + "'>" +
-          "<input class='course-track-checkbox' type='checkbox' data-result-id='" + escapeHtml(resultId) + "' aria-label='Show path for " + escapeHtml(r.displayName || "result") + "'" +
-          (isTrackSelected ? " checked" : "") +
-          (canShowCourseTrack ? "" : " disabled") +
-          " />" +
-          "<span class='course-track-swatch' aria-hidden='true'></span></label></td>";
+        row += "<td>";
+        if (canShowCourseTrack) {
+          row +=
+            "<label class='course-track-toggle' title='Show this timed course path'>" +
+            "<input class='course-track-checkbox' type='checkbox' data-result-id='" + escapeHtml(resultId) + "' aria-label='Show path for " + escapeHtml(r.displayName || "result") + "'" +
+            (isTrackSelected ? " checked" : "") +
+            " />" +
+            (isTrackSelected ? "<span class='course-track-swatch' aria-hidden='true'></span>" : "") +
+            "</label>";
+        } else {
+          row += "<span class='course-track-unavailable'>Not shared</span>";
+        }
+        row += "</td>";
         if (hasHandicap) {
           row += "<td class='time'>" + fmtTime(r.correctedTimeS) + "</td>";
           row += "<td>" + (r.points != null ? r.points.toFixed(1) + "%" : "—") + "</td>";
