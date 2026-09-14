@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write  # required to post validation comment on PR
 
 jobs:
