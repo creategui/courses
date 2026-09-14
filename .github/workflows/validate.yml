@@ -77,9 +77,17 @@ jobs:
             const output = ${{ toJSON(steps.validate.outputs.output) }} || 'No courses changed';
             const result = ${{ toJSON(steps.validate.outputs.result) }} || 'ok';
             const body = `## Course validation\n\n${output}\n\n**Result:** ${result === 'ok' ? '✅ All passed' : '❌ Failed'}`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
+            try {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            } catch (error) {
+              if (error.status === 403) {
+                core.warning(`Skipping PR comment: ${error.message}`);
+                return;
+              }
+              throw error;
+            }
